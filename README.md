@@ -60,6 +60,51 @@ $invoice->recalculate()->save();
 | `POST` | `/api/invoices/{id}/mark-paid` | Apply payment (`amount_cents`), advance status to `partially_paid` or `paid` |
 | `POST` | `/api/invoices/{id}/void` | Mark as void |
 
+## Polymorphic line items
+
+Line items can either be **freehand** (you supply description / quantity / unit_price_cents directly) or **bound to an invoiceable model** via a `morphTo` relation. Any model that implements `Whilesmart\Invoices\Contracts\Invoiceable` (or uses the `IsInvoiceable` trait) can be referenced.
+
+```php
+use Whilesmart\Invoices\Traits\IsInvoiceable;
+
+class LabourRate extends Model
+{
+    use IsInvoiceable;
+    // expose `name`, `default_unit`, `default_price_cents` and the trait does the rest
+}
+```
+
+Then create an invoice line item by reference:
+
+```php
+$invoice->lineItems()->create([
+    'invoiceable_type' => LabourRate::class,
+    'invoiceable_id'   => $rate->id,
+    'quantity'         => 8,
+    // description / unit / unit_price_cents are pulled from the rate and snapshotted
+]);
+```
+
+Or via the API:
+
+```json
+POST /api/invoices
+{
+  "owner_type": "App\\Models\\Workspace",
+  "owner_id": 12,
+  "number": "INV-2026-0001",
+  "issue_date": "2026-04-07",
+  "line_items": [
+    { "invoiceable_type": "App\\Models\\LabourRate", "invoiceable_id": 5, "quantity": 8 },
+    { "description": "Site cleanup", "quantity": 1, "unit_price_cents": 12000 }
+  ]
+}
+```
+
+Snapshot semantics: when a line item is created from an invoiceable, description / unit / price are **copied** at create time. Later edits to the source model never mutate historical invoices.
+
+Pair with `whilesmart/eloquent-products` for a generic SKU catalog as the first concrete `Invoiceable`.
+
 ## Status enum
 
 `Whilesmart\Invoices\Enums\InvoiceStatus`: `draft`, `sent`, `partially_paid`, `paid`, `overdue`, `void`.

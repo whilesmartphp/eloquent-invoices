@@ -5,6 +5,7 @@ namespace Whilesmart\Invoices\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Whilesmart\Invoices\Contracts\Invoiceable;
 use Whilesmart\Invoices\Enums\InvoiceStatus;
 use Whilesmart\Invoices\Http\Requests\StoreInvoiceRequest;
 use Whilesmart\Invoices\Http\Requests\UpdateInvoiceRequest;
@@ -48,14 +49,7 @@ class InvoiceController extends Controller
         $invoice = Invoice::create($data);
 
         foreach ($lineItems as $i => $item) {
-            $invoice->lineItems()->create([
-                'position' => $item['position'] ?? $i,
-                'description' => $item['description'],
-                'quantity' => $item['quantity'] ?? 1,
-                'unit' => $item['unit'] ?? null,
-                'unit_price_cents' => $item['unit_price_cents'] ?? 0,
-                'metadata' => $item['metadata'] ?? null,
-            ]);
+            $invoice->lineItems()->create($this->buildLineItemAttributes($item, $i));
         }
 
         $invoice->recalculate()->save();
@@ -136,5 +130,37 @@ class InvoiceController extends Controller
             'success' => true,
             'data' => new InvoiceResource($invoice->fresh(['customer', 'lineItems'])),
         ]);
+    }
+
+    protected function buildLineItemAttributes(array $item, int $index): array
+    {
+        $snapshot = [
+            'description' => null,
+            'quantity' => 1,
+            'unit' => null,
+            'unit_price_cents' => 0,
+            'metadata' => null,
+        ];
+
+        if (! empty($item['invoiceable_type']) && ! empty($item['invoiceable_id'])) {
+            $class = $item['invoiceable_type'];
+            if (class_exists($class)) {
+                $model = $class::find($item['invoiceable_id']);
+                if ($model instanceof Invoiceable) {
+                    $snapshot = array_merge($snapshot, $model->toLineItemAttributes());
+                }
+            }
+        }
+
+        return [
+            'invoiceable_type' => $item['invoiceable_type'] ?? null,
+            'invoiceable_id' => $item['invoiceable_id'] ?? null,
+            'position' => $item['position'] ?? $index,
+            'description' => $item['description'] ?? $snapshot['description'] ?? '',
+            'quantity' => $item['quantity'] ?? $snapshot['quantity'],
+            'unit' => $item['unit'] ?? $snapshot['unit'],
+            'unit_price_cents' => $item['unit_price_cents'] ?? $snapshot['unit_price_cents'],
+            'metadata' => $item['metadata'] ?? $snapshot['metadata'],
+        ];
     }
 }

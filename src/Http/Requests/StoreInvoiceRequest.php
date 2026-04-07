@@ -29,12 +29,14 @@ class StoreInvoiceRequest extends FormRequest
             'terms' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
             'line_items' => ['nullable', 'array'],
-            'line_items.*.description' => ['required_with:line_items', 'string'],
+            'line_items.*.description' => ['nullable', 'string'],
             'line_items.*.quantity' => ['nullable', 'numeric', 'min:0'],
             'line_items.*.unit_price_cents' => ['nullable', 'integer', 'min:0'],
             'line_items.*.unit' => ['nullable', 'string'],
             'line_items.*.position' => ['nullable', 'integer'],
             'line_items.*.metadata' => ['nullable', 'array'],
+            'line_items.*.invoiceable_type' => ['nullable', 'string'],
+            'line_items.*.invoiceable_id' => ['nullable'],
         ];
     }
 }

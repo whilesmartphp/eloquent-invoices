@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create(config('invoices.line_items_table', 'invoice_line_items'), function (Blueprint $table) {
             $table->id();
             $table->foreignId('invoice_id')->constrained('invoices')->cascadeOnDelete();
+            $table->nullableMorphs('invoiceable');
             $table->unsignedInteger('position')->default(0);
             $table->string('description');
             $table->decimal('quantity', 12, 4)->default(1);

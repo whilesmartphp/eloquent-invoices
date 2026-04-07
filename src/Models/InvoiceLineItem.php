@@ -4,6 +4,7 @@ namespace Whilesmart\Invoices\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class InvoiceLineItem extends Model
 {
@@ -22,6 +23,11 @@ class InvoiceLineItem extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function invoiceable(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     protected static function booted(): void

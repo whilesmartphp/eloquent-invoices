@@ -34,6 +34,8 @@ class InvoiceResource extends JsonResource
             'line_items' => $this->whenLoaded('lineItems', fn () => $this->lineItems->map(fn ($item) => [
                 'id' => $item->id,
                 'position' => $item->position,
+                'invoiceable_type' => $item->invoiceable_type,
+                'invoiceable_id' => $item->invoiceable_id,
                 'description' => $item->description,
                 'quantity' => (float) $item->quantity,
                 'unit' => $item->unit,
