@@ -11,16 +11,19 @@ use Whilesmart\Invoices\Http\Requests\StoreInvoiceRequest;
 use Whilesmart\Invoices\Http\Requests\UpdateInvoiceRequest;
 use Whilesmart\Invoices\Http\Resources\InvoiceResource;
 use Whilesmart\Invoices\Models\Invoice;
+use Whilesmart\OwnerAccess\Concerns\AuthorizesOwnerController;
 
 class InvoiceController extends Controller
 {
+    use AuthorizesOwnerController;
+
     public function index(Request $request): JsonResponse
     {
-        $query = Invoice::with(['customer', 'lineItems']);
+        $query = $this->scopeAccessibleOwners(Invoice::with(['customer', 'lineItems']), $request->user());
 
         if ($request->filled('owner_type') && $request->filled('owner_id')) {
             $query->where('owner_type', $request->input('owner_type'))
-                  ->where('owner_id', $request->input('owner_id'));
+                ->where('owner_id', $request->input('owner_id'));
         }
 
         if ($request->filled('status')) {
@@ -60,8 +63,9 @@ class InvoiceController extends Controller
         ], 201);
     }
 
-    public function show(Invoice $invoice): JsonResponse
+    public function show(Invoice $invoice, Request $request): JsonResponse
     {
+        $this->authorizeAccessTo($invoice, $request->user());
         $invoice->load(['customer', 'lineItems']);
 
         return response()->json([
@@ -81,8 +85,9 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function destroy(Invoice $invoice): JsonResponse
+    public function destroy(Invoice $invoice, Request $request): JsonResponse
     {
+        $this->authorizeAccessTo($invoice, $request->user());
         $invoice->delete();
 
         return response()->json([
@@ -91,8 +96,9 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function send(Invoice $invoice): JsonResponse
+    public function send(Invoice $invoice, Request $request): JsonResponse
     {
+        $this->authorizeAccessTo($invoice, $request->user());
         $invoice->status = InvoiceStatus::Sent;
         $invoice->sent_at = now();
         $invoice->save();
@@ -105,6 +111,7 @@ class InvoiceController extends Controller
 
     public function markPaid(Request $request, Invoice $invoice): JsonResponse
     {
+        $this->authorizeAccessTo($invoice, $request->user());
         $amount = (int) $request->input('amount_cents', $invoice->balanceCents());
         $invoice->amount_paid_cents += $amount;
         $invoice->status = $invoice->balanceCents() === 0
@@ -121,8 +128,9 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function void(Invoice $invoice): JsonResponse
+    public function void(Invoice $invoice, Request $request): JsonResponse
     {
+        $this->authorizeAccessTo($invoice, $request->user());
         $invoice->status = InvoiceStatus::Void;
         $invoice->save();
 

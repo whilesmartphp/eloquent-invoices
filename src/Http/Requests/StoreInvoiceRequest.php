@@ -3,13 +3,15 @@
 namespace Whilesmart\Invoices\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Whilesmart\Invoices\Enums\InvoiceStatus;
+use Whilesmart\OwnerAccess\Concerns\AuthorizesOwnerRequest;
 
 class StoreInvoiceRequest extends FormRequest
 {
+    use AuthorizesOwnerRequest;
+
     public function authorize(): bool
     {
-        return true;
+        return $this->authorizeOwnerInRequest();
     }
 
     public function rules(): array
