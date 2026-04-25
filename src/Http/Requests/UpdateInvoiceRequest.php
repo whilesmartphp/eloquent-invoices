@@ -3,12 +3,15 @@
 namespace Whilesmart\Invoices\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Whilesmart\OwnerAccess\Concerns\AuthorizesOwnerRequest;
 
 class UpdateInvoiceRequest extends FormRequest
 {
+    use AuthorizesOwnerRequest;
+
     public function authorize(): bool
     {
-        return true;
+        return $this->authorizeOwnerOfBoundModel('invoice');
     }
 
     public function rules(): array
