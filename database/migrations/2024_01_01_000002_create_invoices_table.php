@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->morphs('owner');
             $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
-            $table->string('number')->unique();
+            $table->string('number');
             $table->string('status')->default('draft');
             $table->date('issue_date');
             $table->date('due_date')->nullable();
@@ -30,6 +30,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            $table->unique(['owner_type', 'owner_id', 'number']);
             $table->index(['owner_type', 'owner_id', 'status']);
             $table->index(['owner_type', 'owner_id', 'updated_at']);
         });

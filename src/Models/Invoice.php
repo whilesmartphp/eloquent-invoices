@@ -11,10 +11,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Whilesmart\Customers\Models\Customer;
 use Whilesmart\Invoices\Database\Factories\InvoiceFactory;
 use Whilesmart\Invoices\Enums\InvoiceStatus;
+use Whilesmart\Payments\Contracts\Payable;
+use Whilesmart\Payments\Traits\HasPayments;
 
-class Invoice extends Model
+class Invoice extends Model implements Payable
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasPayments, SoftDeletes;
 
     protected $guarded = ['id'];
 
@@ -26,6 +28,36 @@ class Invoice extends Model
         'paid_at' => 'date',
         'metadata' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Invoice $invoice) {
+            if (empty($invoice->number)) {
+                $invoice->number = static::generateNumber($invoice);
+            }
+        });
+    }
+
+    /**
+     * Next per-owner invoice number, e.g. INV-00001. Bumps past any number
+     * already taken for this owner so the (owner, number) unique holds.
+     */
+    public static function generateNumber(Invoice $invoice): string
+    {
+        $prefix = (string) config('invoices.number_prefix', 'INV-');
+        $base = static::withTrashed()
+            ->where('owner_type', $invoice->owner_type)
+            ->where('owner_id', $invoice->owner_id);
+
+        $seq = (clone $base)->count();
+
+        do {
+            $seq++;
+            $number = $prefix.str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
+        } while ((clone $base)->where('number', $number)->exists());
+
+        return $number;
+    }
 
     public function getTable(): string
     {

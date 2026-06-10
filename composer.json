@@ -2,7 +2,7 @@
     "name": "whilesmart/eloquent-invoices",
     "description": "Polymorphic invoice management with line items for Laravel applications.",
     "type": "library",
-    "package-version": "1.0.0",
+    "version": "1.0.0",
     "license": "MIT",
     "authors": [
         { "name": "Whilesmart Team" }
@@ -11,7 +11,8 @@
         "php": "^8.2",
         "laravel/framework": "^11.0|^12.0",
         "whilesmart/eloquent-customers": "dev-main",
-        "whilesmart/eloquent-owner-access": "dev-dev"
+        "whilesmart/eloquent-owner-access": "dev-dev",
+        "whilesmart/eloquent-payments": "dev-dev"
     },
     "require-dev": {
         "orchestra/testbench": "^9.0|^10.0",

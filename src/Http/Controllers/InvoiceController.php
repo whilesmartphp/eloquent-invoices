@@ -7,11 +7,15 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Whilesmart\Invoices\Contracts\Invoiceable;
 use Whilesmart\Invoices\Enums\InvoiceStatus;
+use Whilesmart\Invoices\Events\InvoicePaid;
+use Whilesmart\Invoices\Events\InvoiceSent;
 use Whilesmart\Invoices\Http\Requests\StoreInvoiceRequest;
 use Whilesmart\Invoices\Http\Requests\UpdateInvoiceRequest;
 use Whilesmart\Invoices\Http\Resources\InvoiceResource;
 use Whilesmart\Invoices\Models\Invoice;
 use Whilesmart\OwnerAccess\Concerns\AuthorizesOwnerController;
+use Whilesmart\Payments\Enums\PaymentDirection;
+use Whilesmart\Payments\Enums\PaymentStatus;
 
 class InvoiceController extends Controller
 {
@@ -103,6 +107,8 @@ class InvoiceController extends Controller
         $invoice->sent_at = now();
         $invoice->save();
 
+        InvoiceSent::dispatch($invoice);
+
         return response()->json([
             'success' => true,
             'data' => new InvoiceResource($invoice->fresh(['customer', 'lineItems'])),
@@ -113,14 +119,27 @@ class InvoiceController extends Controller
     {
         $this->authorizeAccessTo($invoice, $request->user());
         $amount = (int) $request->input('amount_cents', $invoice->balanceCents());
-        $invoice->amount_paid_cents += $amount;
+
+        $invoice->recordPayment([
+            'owner_type' => $invoice->owner_type,
+            'owner_id' => $invoice->owner_id,
+            'amount_cents' => $amount,
+            'currency' => $invoice->currency,
+            'status' => PaymentStatus::Succeeded->value,
+            'direction' => PaymentDirection::Inbound->value,
+            'method' => $request->input('method', 'manual'),
+            'gateway' => $request->input('gateway', 'manual'),
+            'succeeded_at' => now(),
+        ]);
+
         $invoice->status = $invoice->balanceCents() === 0
             ? InvoiceStatus::Paid
             : InvoiceStatus::PartiallyPaid;
-        if ($invoice->status === InvoiceStatus::Paid) {
-            $invoice->paid_at = now();
-        }
         $invoice->save();
+
+        if ($invoice->status === InvoiceStatus::Paid) {
+            InvoicePaid::dispatch($invoice, $amount);
+        }
 
         return response()->json([
             'success' => true,
