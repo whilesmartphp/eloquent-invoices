@@ -8,6 +8,7 @@ use Illuminate\Routing\Controller;
 use Whilesmart\Invoices\Contracts\Invoiceable;
 use Whilesmart\Invoices\Enums\InvoiceStatus;
 use Whilesmart\Invoices\Events\InvoicePaid;
+use Whilesmart\Invoices\Events\InvoicePartiallyPaid;
 use Whilesmart\Invoices\Events\InvoiceSent;
 use Whilesmart\Invoices\Http\Requests\StoreInvoiceRequest;
 use Whilesmart\Invoices\Http\Requests\UpdateInvoiceRequest;
@@ -129,7 +130,7 @@ class InvoiceController extends Controller
             'direction' => PaymentDirection::Inbound->value,
             'method' => $request->input('method', 'manual'),
             'gateway' => $request->input('gateway', 'manual'),
-            'succeeded_at' => now(),
+            'succeeded_at' => $request->input('succeeded_at', now()),
         ]);
 
         $invoice->status = $invoice->balanceCents() === 0
@@ -139,6 +140,8 @@ class InvoiceController extends Controller
 
         if ($invoice->status === InvoiceStatus::Paid) {
             InvoicePaid::dispatch($invoice, $amount);
+        } else {
+            InvoicePartiallyPaid::dispatch($invoice, $amount);
         }
 
         return response()->json([

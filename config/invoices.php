@@ -7,4 +7,5 @@ return [
     'invoices_table' => env('INVOICES_TABLE', 'invoices'),
     'line_items_table' => env('INVOICE_LINE_ITEMS_TABLE', 'invoice_line_items'),
     'number_prefix' => env('INVOICE_NUMBER_PREFIX', 'INV-'),
+    'number_length' => (int) env('INVOICE_NUMBER_LENGTH', 5),
 ];
