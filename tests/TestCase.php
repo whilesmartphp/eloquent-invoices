@@ -8,6 +8,7 @@ use Orchestra\Testbench\TestCase as BaseTestCase;
 use Whilesmart\Customers\CustomersServiceProvider;
 use Whilesmart\Invoices\InvoicesServiceProvider;
 use Whilesmart\OwnerAccess\OwnerAccessServiceProvider;
+use Whilesmart\Payments\PaymentsServiceProvider;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -17,6 +18,7 @@ abstract class TestCase extends BaseTestCase
     {
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         $this->loadMigrationsFrom(__DIR__.'/../vendor/whilesmart/eloquent-customers/database/migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../vendor/whilesmart/eloquent-payments/database/migrations');
 
         Schema::create('workspaces', function ($table) {
             $table->id();
@@ -30,6 +32,7 @@ abstract class TestCase extends BaseTestCase
         return [
             OwnerAccessServiceProvider::class,
             CustomersServiceProvider::class,
+            PaymentsServiceProvider::class,
             InvoicesServiceProvider::class,
         ];
     }

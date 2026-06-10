@@ -39,24 +39,26 @@ class Invoice extends Model implements Payable
     }
 
     /**
-     * Next per-owner invoice number, e.g. INV-00001. Bumps past any number
-     * already taken for this owner so the (owner, number) unique holds.
+     * Next per-owner invoice number, e.g. INV-00001. Derives the next sequence
+     * from the highest existing number for this owner. The (owner, number)
+     * unique index is the final guard against duplicates.
      */
     public static function generateNumber(Invoice $invoice): string
     {
         $prefix = (string) config('invoices.number_prefix', 'INV-');
-        $base = static::withTrashed()
+        $length = (int) config('invoices.number_length', 5);
+
+        $last = static::withTrashed()
             ->where('owner_type', $invoice->owner_type)
-            ->where('owner_id', $invoice->owner_id);
+            ->where('owner_id', $invoice->owner_id)
+            ->where('number', 'like', $prefix.'%')
+            ->orderByRaw('LENGTH(number) DESC')
+            ->orderBy('number', 'DESC')
+            ->value('number');
 
-        $seq = (clone $base)->count();
+        $seq = $last ? (int) str_replace($prefix, '', $last) : 0;
 
-        do {
-            $seq++;
-            $number = $prefix.str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
-        } while ((clone $base)->where('number', $number)->exists());
-
-        return $number;
+        return $prefix.str_pad((string) ($seq + 1), $length, '0', STR_PAD_LEFT);
     }
 
     public function getTable(): string
