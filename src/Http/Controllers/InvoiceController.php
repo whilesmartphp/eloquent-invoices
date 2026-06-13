@@ -5,6 +5,7 @@ namespace Whilesmart\Invoices\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Whilesmart\Invoices\Contracts\Invoiceable;
 use Whilesmart\Invoices\Enums\InvoiceStatus;
 use Whilesmart\Invoices\Events\InvoicePaid;
@@ -91,16 +92,18 @@ class InvoiceController extends Controller
         $lineItems = $data['line_items'] ?? null;
         unset($data['line_items']);
 
-        $invoice->update($data);
+        DB::transaction(function () use ($invoice, $data, $lineItems) {
+            $invoice->update($data);
 
-        if (is_array($lineItems)) {
-            $invoice->lineItems()->delete();
-            foreach ($lineItems as $i => $item) {
-                $invoice->lineItems()->create($this->buildLineItemAttributes($item, $i));
+            if (is_array($lineItems)) {
+                $invoice->lineItems()->delete();
+                $invoice->lineItems()->createMany(
+                    array_map(fn ($item, $i) => $this->buildLineItemAttributes($item, $i), $lineItems, array_keys($lineItems))
+                );
             }
-        }
 
-        $invoice->recalculate()->save();
+            $invoice->recalculate()->save();
+        });
 
         return response()->json([
             'success' => true,
