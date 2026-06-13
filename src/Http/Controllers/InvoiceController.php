@@ -81,7 +81,25 @@ class InvoiceController extends Controller
 
     public function update(UpdateInvoiceRequest $request, Invoice $invoice): JsonResponse
     {
-        $invoice->update($request->validated());
+        if (in_array($invoice->status, [InvoiceStatus::Paid, InvoiceStatus::Void], true)) {
+            return response()->json([
+                'message' => 'A paid or void invoice cannot be edited.',
+            ], 422);
+        }
+
+        $data = $request->validated();
+        $lineItems = $data['line_items'] ?? null;
+        unset($data['line_items']);
+
+        $invoice->update($data);
+
+        if (is_array($lineItems)) {
+            $invoice->lineItems()->delete();
+            foreach ($lineItems as $i => $item) {
+                $invoice->lineItems()->create($this->buildLineItemAttributes($item, $i));
+            }
+        }
+
         $invoice->recalculate()->save();
 
         return response()->json([

@@ -1,3 +1,9 @@
+## [1.1.0] - 2026-06-13
+
+### Added
+- Invoices can now be edited after creation: the update endpoint accepts line items, replaces them, and recalculates totals
+- Editing is blocked for paid or void invoices, which are returned as a validation error
+
 ## [1.0.0] - 2026-06-10
 - Polymorphic invoice management with line items, scoped per owner via owner-access
 - Auto-generate per-workspace invoice numbers when none is supplied, unique per owner, with a configurable padding length
