@@ -5,6 +5,7 @@ namespace Whilesmart\Invoices\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Whilesmart\Invoices\Contracts\Invoiceable;
 use Whilesmart\Invoices\Enums\InvoiceStatus;
 use Whilesmart\Invoices\Events\InvoicePaid;
@@ -81,8 +82,28 @@ class InvoiceController extends Controller
 
     public function update(UpdateInvoiceRequest $request, Invoice $invoice): JsonResponse
     {
-        $invoice->update($request->validated());
-        $invoice->recalculate()->save();
+        if (in_array($invoice->status, [InvoiceStatus::Paid, InvoiceStatus::Void], true)) {
+            return response()->json([
+                'message' => 'A paid or void invoice cannot be edited.',
+            ], 422);
+        }
+
+        $data = $request->validated();
+        $lineItems = $data['line_items'] ?? null;
+        unset($data['line_items']);
+
+        DB::transaction(function () use ($invoice, $data, $lineItems) {
+            $invoice->update($data);
+
+            if (is_array($lineItems)) {
+                $invoice->lineItems()->delete();
+                $invoice->lineItems()->createMany(
+                    array_map(fn ($item, $i) => $this->buildLineItemAttributes($item, $i), $lineItems, array_keys($lineItems))
+                );
+            }
+
+            $invoice->recalculate()->save();
+        });
 
         return response()->json([
             'success' => true,
