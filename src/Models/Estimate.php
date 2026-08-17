@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Whilesmart\Customers\Models\Customer;
 use Whilesmart\Invoices\Database\Factories\EstimateFactory;
 use Whilesmart\Invoices\Enums\EstimateStatus;
@@ -109,39 +110,43 @@ class Estimate extends Model
 
     public function convertToInvoice(array $overrides = []): Invoice
     {
-        $invoice = Invoice::create(array_merge([
-            'owner_type' => $this->owner_type,
-            'owner_id' => $this->owner_id,
-            'customer_id' => $this->customer_id,
-            'status' => InvoiceStatus::Draft,
-            'issue_date' => now()->toDateString(),
-            'currency' => $this->currency,
-            'discount_cents' => $this->discount_cents,
-            'tax_cents' => $this->tax_cents,
-            'notes' => $this->notes,
-            'terms' => $this->terms,
-        ], $overrides));
+        $invoice = DB::transaction(function () use ($overrides) {
+            $invoice = Invoice::create(array_merge([
+                'owner_type' => $this->owner_type,
+                'owner_id' => $this->owner_id,
+                'customer_id' => $this->customer_id,
+                'status' => InvoiceStatus::Draft,
+                'issue_date' => now()->toDateString(),
+                'currency' => $this->currency,
+                'discount_cents' => $this->discount_cents,
+                'tax_cents' => $this->tax_cents,
+                'notes' => $this->notes,
+                'terms' => $this->terms,
+            ], $overrides));
 
-        foreach ($this->lineItems as $item) {
-            $invoice->lineItems()->create([
-                'invoiceable_type' => $item->estimateable_type,
-                'invoiceable_id' => $item->estimateable_id,
-                'position' => $item->position,
-                'description' => $item->description,
-                'quantity' => $item->quantity,
-                'unit' => $item->unit,
-                'unit_price_cents' => $item->unit_price_cents,
-                'metadata' => $item->metadata,
-            ]);
-        }
+            foreach ($this->lineItems as $item) {
+                $invoice->lineItems()->create([
+                    'invoiceable_type' => $item->estimateable_type,
+                    'invoiceable_id' => $item->estimateable_id,
+                    'position' => $item->position,
+                    'description' => $item->description,
+                    'quantity' => $item->quantity,
+                    'unit' => $item->unit,
+                    'unit_price_cents' => $item->unit_price_cents,
+                    'metadata' => $item->metadata,
+                ]);
+            }
 
-        $invoice->recalculate()->save();
+            $invoice->recalculate()->save();
 
-        $this->forceFill([
-            'status' => EstimateStatus::Accepted,
-            'accepted_at' => now()->toDateString(),
-            'converted_invoice_id' => $invoice->id,
-        ])->save();
+            $this->forceFill([
+                'status' => EstimateStatus::Accepted,
+                'accepted_at' => now()->toDateString(),
+                'converted_invoice_id' => $invoice->id,
+            ])->save();
+
+            return $invoice;
+        });
 
         EstimateAccepted::dispatch($this, $invoice);
 
