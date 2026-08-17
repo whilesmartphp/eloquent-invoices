@@ -1,3 +1,10 @@
+## [1.2.0] - 2026-08-18
+
+### Added
+- Estimates: line-item documents with per-owner numbering that accept into a draft invoice, carrying their line items
+- Cost breakdown behind an estimate that rolls up into margin without changing the customer-facing total
+- Estimate endpoints: CRUD plus send, accept and decline, owner-scoped like invoices
+
 ## [1.1.0] - 2026-06-13
 
 ### Added
