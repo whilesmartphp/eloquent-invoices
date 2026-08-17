@@ -8,4 +8,9 @@ return [
     'line_items_table' => env('INVOICE_LINE_ITEMS_TABLE', 'invoice_line_items'),
     'number_prefix' => env('INVOICE_NUMBER_PREFIX', 'INV-'),
     'number_length' => (int) env('INVOICE_NUMBER_LENGTH', 5),
+
+    'estimates_table' => env('ESTIMATES_TABLE', 'estimates'),
+    'estimate_line_items_table' => env('ESTIMATE_LINE_ITEMS_TABLE', 'estimate_line_items'),
+    'estimate_cost_items_table' => env('ESTIMATE_COST_ITEMS_TABLE', 'estimate_cost_items'),
+    'estimate_number_prefix' => env('ESTIMATE_NUMBER_PREFIX', 'EST-'),
 ];
