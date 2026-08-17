@@ -24,7 +24,6 @@ return new class extends Migration
             $table->bigInteger('tax_cents')->default(0);
             $table->bigInteger('total_cents')->default(0);
 
-            // The invoice this estimate became on acceptance, if any.
             $table->unsignedBigInteger('converted_invoice_id')->nullable();
 
             $table->text('notes')->nullable();
