@@ -8,9 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Internal cost breakdown behind an estimate: what it costs to deliver,
-        // optionally attributed to one of the estimate's line items. Not
-        // customer-facing; it feeds margin, not the estimate total.
         Schema::create(config('invoices.estimate_cost_items_table', 'estimate_cost_items'), function (Blueprint $table) {
             $table->id();
             $table->foreignId('estimate_id')->constrained(config('invoices.estimates_table', 'estimates'))->cascadeOnDelete();

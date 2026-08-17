@@ -22,7 +22,7 @@ class EstimateController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = $this->scopeAccessibleOwners(Estimate::with(['customer', 'lineItems']), $request->user());
+        $query = $this->scopeAccessibleOwners(Estimate::with(['customer', 'lineItems', 'costItems']), $request->user());
 
         if ($request->filled('owner_type') && $request->filled('owner_id')) {
             $query->where('owner_type', $request->input('owner_type'))
@@ -53,8 +53,12 @@ class EstimateController extends Controller
         $costItems = $data['cost_items'] ?? [];
         unset($data['line_items'], $data['cost_items']);
 
-        $estimate = Estimate::create($data);
-        $this->replaceItems($estimate, $lineItems, $costItems);
+        $estimate = DB::transaction(function () use ($data, $lineItems, $costItems) {
+            $estimate = Estimate::create($data);
+            $this->replaceItems($estimate, $lineItems, $costItems);
+
+            return $estimate;
+        });
 
         return response()->json([
             'success' => true,

@@ -38,10 +38,6 @@ class Estimate extends Model
         });
     }
 
-    /**
-     * Next per-owner estimate number, e.g. EST-00001, mirroring the invoice
-     * numbering. The (owner, number) unique index is the final guard.
-     */
     public static function generateNumber(Estimate $estimate): string
     {
         $prefix = (string) config('invoices.estimate_number_prefix', 'EST-');
@@ -99,22 +95,18 @@ class Estimate extends Model
         return $this;
     }
 
-    /** Total internal cost from the cost breakdown. */
     public function costTotalCents(): int
     {
-        return (int) $this->costItems()->sum('amount_cents');
+        return (int) ($this->relationLoaded('costItems')
+            ? $this->costItems->sum('amount_cents')
+            : $this->costItems()->sum('amount_cents'));
     }
 
-    /** What is left after cost: the estimate total minus the cost breakdown. */
     public function marginCents(): int
     {
         return $this->total_cents - $this->costTotalCents();
     }
 
-    /**
-     * Turn an accepted estimate into a draft invoice, carrying the line items.
-     * Marks the estimate accepted and records the resulting invoice.
-     */
     public function convertToInvoice(array $overrides = []): Invoice
     {
         $invoice = Invoice::create(array_merge([
